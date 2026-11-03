@@ -93,30 +93,7 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 	unsigned int op1 = (instruction & (31 << 20)) >> 20;
 	unsigned int op2 = (instruction & (15 << 4) >> 4);
 
-	/*
-	continue from page 194
-
-	NOT DONE:		
-	- if op1 is not 0xx1x and below until if op1 is 0xx11 (extra load/store instructions)
-
-	DONE: 			
-	- if op == 0
-		- if op1 is not 10xx0 
-			- if op2 is 0xx0 	(data-processing register)
-			- if op2 is 0xx1	(data-processing register-shifted register)
-		- if op1 is 10xx0
-			- if op2 is 0xxx	(misc instructions)
-			- if op2 is 1xx0	(halfword multiply and accmulate)
-		- if op1 is 0xxxx
-			- if op2 is 1001	(multiply and accumulate)
-		- if op1 is 1xxxx 		
-			- if op2 is 1001	(synchronization)
-	
-	- if op == 1 and everything with that (data-processing immediate, 16-bit MOV immediate, 16-bit high halfword MOVT, MSR immediate)
-	*/
-
-	// 01111 = 15
-
+	// TODO: replace sprintf calls with data processing type2 calls (i.e. data processing register, data processing register-shifted register, etc.)
 
 	if (op == 0) {
 		// check if op1 is not 10xx0
@@ -138,9 +115,25 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 			if (op2 == 0b1001) {
 				sprintf(decoded_instruction, "multiply and accumulate (page A5-200)\n");
 			}
-		} else if (op1 >= 32 && op1 <= 63) { /* check if op1 is 1xxxx */
+		} else if (op1 >= 16 && op1 <= 31) { /* check if op1 is 1xxxx */
 			if (op2 == 0b1001) {
 				sprintf(decoded_instruction, "sycnhronization primitives (page A5-203)\n");
+			}
+		} else if (op1 == 1 || op1 == 16 || op1 == 17) { /* check if op1 is not 0xx1x */
+			if (op2 == 0b1011 || op2 == 0b1101 || op2 == 0b1111) {
+				sprintf(decoded_instruction, "extra load/store instruction (page A5-201)\n");
+			}
+		} else if (op1 == 0b00010 || op1 == 0b01010 || op1 == 0b10010 || op1 == 0b11010) {
+			if (op2 == 0b1101 || op2 == 0b1111) {
+				sprintf(decoded_instruction, "extra load/store instruction (page A5-201\n");
+			}
+		} else if (op1 != 1 && op1 != 16 && op1 != 17) { /* check if op1 is 0xx1x */
+			if (op2 == 0b1011) {
+				sprintf(decoded_instruction, "extra load/store instruction (page A5-201)\n");
+			}
+		} else if (op1 == 0b0011 || op1 == 0b0111 || op1 == 0b1011 || op1 == 0b1111) { /* check if op1 is 0xx11 */
+			if (op2 == 0b1101 || op2 == 0b1111) {
+				sprintf(decoded_instruction, "extra load/store instruction (page A5-201)\n");
 			}
 		}
 	} else {
