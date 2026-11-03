@@ -53,7 +53,7 @@ typedef struct section_header {
 	unsigned int sh_entsize;				// section header entry size (end of section header)
 } section_header;
 
-#include "./decode.h"
+#include "./decoding/decode.h"
 
 char *abi_table[18];
 char *get_elf_os_abi(char os_abi) {

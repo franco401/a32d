@@ -5,7 +5,7 @@
 #include <math.h>
 
 #include "../include/elf.h"
-#include "../include/decode.h"
+#include "../include/decoding/decode.h"
 
 #define MAX_FILENAME_LENGTH 255
 

@@ -1,7 +1,7 @@
 /*
 	TODO: eventually implement the following
 	
-	- (not finished yet)	data processing category and types
+	- (unfinished)			data processing category and types (just need types now)
 	- (not started yet)		load/store category and instruction types
 	- (not started yet)		media instruction category and instruction types
 	- (unfinished) 			branch instruction types
@@ -10,10 +10,12 @@
 
 */
 
+// Purpose of this file:
+// Decodes instruction category --> category type --> dedicated instructions
+
 #pragma once
 
 #include <math.h>
-#include "./elf.h"
 
 #define MAX_INSTRUCTION_LENGTH 		255
 #define DECODED_INSTRUCTIONS_LEN	3
@@ -27,6 +29,9 @@ void save_decoded_instruction_to_file(FILE *fp, const char *data, unsigned long 
 		fputc(data[i], fp);
 	}
 }
+
+#include "./branching.h"
+#include "./data_processing.h"
 
 // load a stream of n bytes as one large value
 unsigned int load_value(const unsigned char *bytes, unsigned int n) {
@@ -54,28 +59,6 @@ unsigned int load_value_le(const unsigned char *bytes, unsigned int n) {
 	return value;
 }
 
-void decode_branch_instruction(unsigned int instruction, unsigned int cond) {
-	size_t bytes_to_write = 0;
-	unsigned int imm24 = (instruction) & ((1 << 24) - 1);
-
-	// continuously shift to the left
-	// until imm24 is 4-byte aligned
-	while (imm24 % 4 != 0) {
-		imm24 <<= 1;
-	}
-	
-	if (cond != 0b1111) {
-		sprintf(decoded_instruction, "bne %u\n", imm24);
-		bytes_to_write = strlen(decoded_instruction);
-	} else {
-		sprintf(decoded_instruction, "beq %u\n", imm24);
-		bytes_to_write = strlen(decoded_instruction);
-	}
-
-	save_decoded_instruction_to_file(fp, decoded_instruction, bytes_to_write);
-	printf("Decoded instruction %d: %s\n", ++instructions_decoded, decoded_instruction);
-}
-
 // determine which type of branch instruction to do
 void decode_branch_type(unsigned int instruction, unsigned int cond) {
 	unsigned int rn = (instruction & (15 << 19)) >> 19;
@@ -86,6 +69,26 @@ void decode_branch_type(unsigned int instruction, unsigned int cond) {
 		decode_branch_instruction(instruction, cond);
 	}
 }
+
+void data_processing_register_type(unsigned int instruction, unsigned int cond) {
+	if (cond == 0b00000 || cond == 0b00001) {
+		sprintf(decoded_instruction, "AND - bitwise AND (register) (page A8-324");
+		// decode_bitwise_and_instruction(instruction, cond);
+	}
+
+
+	// last two data processing register type instructions
+	if (cond == 0b11100 || cond == 0b11101) {
+		sprintf(decoded_instruction, "BIC - bitwise clear (register) (page A8-340)\n");
+		// decode_bitwise_bit_clear_instruction(instruction, cond);
+	} else if (cond == 0b11110 || cond == 0b11111) {
+		sprintf(decoded_instruction, "MVN - bitwise NOT (register) (page A8-507)\n");
+		// decode_bitwise_not_instruction(instruction, cond);
+	}
+}
+
+// implement this next from page 195
+void data_processing_register_shifted_register_type(unsigned int instruction, unsigned int cond);
 
 // determine which type of data processing instruction to do
 void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
@@ -100,9 +103,10 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 		if (op1 != 0b10000 && op1 != 0b10010 && op1 != 0b10100 && op1 != 10110) {
 			// check if op2 is xxx0
 			if (op2 == 0b0000 || op2 == 0b0010 || op2 == 0b0100 || op2 == 0b0110 || op2 == 0b1000 || op2 == 0b1010 || op2 == 0b1100 || op2 == 0b1110) {
-				sprintf(decoded_instruction, "Data processing (register) (page A5-195)\n");
+				data_processing_register_type(instruction, cond);
 			} else if (op2 == 0b001 || op2 == 0b0011 || op2 == 0b0101 || op2 == 0111) { /* check if op2 is 0xx1 */
 				sprintf(decoded_instruction, "Data processing (register-shifted register) (page A5-195)\n");
+				// data_processing_register_shifted_register_type(instruction, cond);
 			}
 		} else if (op1 == 0b10000 || op1 == 0b10010 || op1 == 0b10100 || op1 == 0b10110) { /* check if op1 is 10xx0 */
 			// check if op2 is 0xxx
