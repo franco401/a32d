@@ -81,6 +81,7 @@ void decode_branch_type(unsigned int instruction, unsigned int cond) {
 	unsigned int rn = (instruction & (15 << 19)) >> 19;
 	unsigned int op = (instruction & (63 << 20)) >> 20;
 
+	// might be an incorrect way to check for op
 	if (op >= 32 && op <= 63) {
 		decode_branch_instruction(instruction, cond);
 	}
@@ -88,10 +89,59 @@ void decode_branch_type(unsigned int instruction, unsigned int cond) {
 
 // determine which type of data processing instruction to do
 void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
-	sprintf(decoded_instruction, "data_processing_instr\n");
+	unsigned int op = (instruction & (1 << 25)) >> 25;
+	unsigned int op1 = (instruction & (31 << 20)) >> 20;
+	unsigned int op2 = (instruction & (15 << 4) >> 4);
+
+	/*
+	continue from page 194
+
+	NOT DONE:		
+	- if op1 is 10xx0 and below until if op1 is 0xx11
+
+	DONE: 			
+	- if op == 0
+		- if op1 is not 10xx0 
+			- if op2 is 0xx0 	(data-processing register)
+			- if op2 is 0xx11	(data-processing register-shifted register)
+	
+	- if op == 1 and everything with that (data-processing immediate, 16-bit MOV immediate, 16-bit high halfword MOVT, MSR immediate)
+	*/
+
+	if (op == 0) {
+		// check if op1 is not 10xx0 (can't be 16, 18, 20 or 22)
+		if (op1 != 0b10000 && op1 != 0b10010 && op1 != 0b10100 && op1 != 10110) {
+			// check if op2 is xxx0
+			if (op2 == 0b0000 || op2 == 0b0010 || op2 == 0b0100 || op2 == 0b0110 || op2 == 0b1000 || op2 == 0b1010 || op2 == 0b1100 || op2 == 0b1110) {
+				sprintf(decoded_instruction, "Data processing (register) (page A5-195)\n");
+			} else if (op2 == 0b001 || op2 == 0b0011 || op2 == 0b0101 || op2 == 0111) /* check if op2 == 0xx1 (either 1, 3, 5 or 7) */ {
+				sprintf(decoded_instruction, "Data processing (register-shifted register) (page A5-195)\n");
+			}
+		} else {
+			// check if op1 is 10xx0 and more later
+			sprintf(decoded_instruction, "Unknown data processing instruction\n");
+		}
+	} else {
+		// check if op1 is not 10xx0
+		if (op1 != 0b10000 && op1 != 0b10010 && op1 != 0b10100 && op1 != 0b10110) {
+			sprintf(decoded_instruction, "data processing immediate (page A5-197)\n");
+		} else if (op1 == 0b10000) {
+			sprintf(decoded_instruction, "16 bit immediate load, MOV (immediate) (page A8-485)\n");
+		} else if (op1 == 0b10100) {
+			sprintf(decoded_instruction, "High halfword 16-bit immediate load, MOVT (page A8-492)\n");
+		} else if (op1 == 0b10010 || op1 == 0b10110) {
+			sprintf(decoded_instruction, "MSR (immediate) (page A5-204)\n");
+		}
+	}
+
 	size_t bytes_to_write = strlen(decoded_instruction);
 	save_decoded_instruction_to_file(fp, decoded_instruction, bytes_to_write);
 	printf("Decoded instruction %d: %s\n", ++instructions_decoded, decoded_instruction);
+
+	/*
+	sprintf(decoded_instruction, "data_processing_instr\n");
+	
+	*/
 }
 
 // decode instruction category which includes:
