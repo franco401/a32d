@@ -1,22 +1,6 @@
+#pragma once
+
 #include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <math.h>
-
-#define MAX_FILENAME_LENGTH 255
-
-unsigned long get_file_size(FILE *fp) {
-	// go to end of file
-	fseek(fp, 0L, SEEK_END);
-
-	// to get the file size in bytes
-	long file_size = ftell(fp);
-	
-	// go back to start of file
-	fseek(fp, 0L, SEEK_SET);
-	return file_size;
-}
 
 typedef struct elf_header {
 	unsigned char e_magic_number[4];		// 0x7F 0x45 0x4C 0x46 (zELF, 7 bytes)
@@ -44,18 +28,7 @@ typedef struct elf_header {
 	unsigned int e_shstrndx;				// index of section header table entry containing section names
 } elf_header;
 
-// load a stream of n bytes as one large value
-unsigned int load_value(const unsigned char *bytes, unsigned int n) {
-	unsigned int value = 0;
-	unsigned int exp = 0;
-
-	for (unsigned int i = 0; i < n; i++) {
-		value += bytes[i] * (int)pow(256, exp);
-		exp++;
-	}
-
-	return value;
-}
+#include "./decode.h"
 
 char *abi_table[18];
 char *get_elf_os_abi(char os_abi) {
@@ -340,77 +313,4 @@ void read_elf_header(elf_header *header, const unsigned char *file_data) {
 	printf("Header Type:\t\t\t\t%s\nMachine ISA:\t\t\t\t%s\nELF Version:\t\t\t\t%d\nEntry point address:\t\t\t0x%x (%u)\nProcess header offset:\t\t\t0x%x (%u)\nSection header offset:\t\t\t0x%x (%u)\nFlags:\t\t\t\t\t0x%x (%d)\n", get_header_type(header->e_type), get_isa_type(header->e_machine), header->e_version, header->e_entry, header->e_entry, header->e_phoff, header->e_phoff, header->e_shoff, header->e_shoff, header->e_flags, header->e_flags);
 	printf("ELF header size:\t\t\t0x%x (%d)\nProgram header size:\t\t\t0x%x (%d)\nNumber of entires in program header:\t0x%x (%u)\nSection header size:\t\t\t0x%x (%d)\nNumber of entires in section header:\t0x%x (%d)\nSection header string index:\t\t0x%x (%d)\n", header->e_ehsize, header->e_ehsize, header->e_phentsize, header->e_phentsize, header->e_phum, header->e_phum, header->e_shentsize, header->e_shentsize, header->e_shnum,header->e_shnum, header->e_shstrndx, header->e_shstrndx);
 	printf("================================================================================\n");
-}
-
-int main(int argc, char **argv) {
-	if (argc != 4) {
-		printf("(Incorrect format) Usage: a32d <binary> -o <output_filename>\n");
-		exit(EXIT_FAILURE);
-	}
-
-	if (strcmp(argv[2], "-o") != 0) {
-		printf("(Missing requried -o flag) Usage: a32d <binary> -o <output_filename>\n");
-		exit(EXIT_FAILURE);
-	}
-
-	// check length of input binary and output filename lengths
-	if (strlen(argv[1]) > MAX_FILENAME_LENGTH || strlen(argv[3]) > MAX_FILENAME_LENGTH) {
-		printf("The input and output filenames must be up to 255 bytes/characters long.\n");
-		exit(EXIT_FAILURE);
-	}
-
-	// add .s extension to given output filename
-	char output_filename[MAX_FILENAME_LENGTH];
-	int bytes_written = sprintf(output_filename, "%s.s", argv[3]);
-	if (bytes_written < 0) {
-		printf("Couldn't format with sprintf\n");
-		exit(EXIT_FAILURE);
-	}
-
-	const char *binary = argv[1];
-	const char *mode = "rb";
-	FILE *fp = fopen(binary, mode);
-	if (!fp) {
-		printf("Couldn't open the binary: %s\n", binary);
-		exit(EXIT_FAILURE);
-	}
-
-	unsigned long file_size = get_file_size(fp);
-	unsigned char *file_data = malloc(file_size);
-	if (!file_data) {
-		printf("Couldn't allocate %lu bytes in the heap\n", file_size);
-		exit(EXIT_FAILURE);
-	}
-
-	// zero out the heap buffer
-	memset(file_data, 0, file_size);
-
-	// read the binary and store it into the file_data buffer
-	unsigned long i = -1;
-	while (!feof(fp)) {
-		file_data[++i] = fgetc(fp);
-	}
-
-	fclose(fp);
-
-	elf_header header;
-	read_elf_header(&header, file_data);
-
-	unsigned int count = 1;
-
-	printf("Instructions from entry point\n\n");
-	// print the first 3 instructions (first 3 groups of 4 bytes) from entry point for now
-	for (unsigned i = header.e_entry; i < header.e_entry + 12; i++) {
-		if (file_data[i] < 15) {
-			printf("Byte #%u: 0x%0x (%u)\n", i, file_data[i], file_data[i]);
-		} else {
-			printf("Byte #%u: 0x%x (%u)\n", i, file_data[i], file_data[i]);
-		}
-		if (count > 1 && count % 4 == 0) {
-			printf("\n");
-		}
-		count++;
-	}
-	printf("================================================================================\n");
-	return 0;
 }
