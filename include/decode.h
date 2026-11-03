@@ -97,29 +97,51 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 	continue from page 194
 
 	NOT DONE:		
-	- if op1 is 10xx0 and below until if op1 is 0xx11
+	- if op1 is not 0xx1x and below until if op1 is 0xx11 (extra load/store instructions)
 
 	DONE: 			
 	- if op == 0
 		- if op1 is not 10xx0 
 			- if op2 is 0xx0 	(data-processing register)
-			- if op2 is 0xx11	(data-processing register-shifted register)
+			- if op2 is 0xx1	(data-processing register-shifted register)
+		- if op1 is 10xx0
+			- if op2 is 0xxx	(misc instructions)
+			- if op2 is 1xx0	(halfword multiply and accmulate)
+		- if op1 is 0xxxx
+			- if op2 is 1001	(multiply and accumulate)
+		- if op1 is 1xxxx 		
+			- if op2 is 1001	(synchronization)
 	
 	- if op == 1 and everything with that (data-processing immediate, 16-bit MOV immediate, 16-bit high halfword MOVT, MSR immediate)
 	*/
 
+	// 01111 = 15
+
+
 	if (op == 0) {
-		// check if op1 is not 10xx0 (can't be 16, 18, 20 or 22)
+		// check if op1 is not 10xx0
 		if (op1 != 0b10000 && op1 != 0b10010 && op1 != 0b10100 && op1 != 10110) {
 			// check if op2 is xxx0
 			if (op2 == 0b0000 || op2 == 0b0010 || op2 == 0b0100 || op2 == 0b0110 || op2 == 0b1000 || op2 == 0b1010 || op2 == 0b1100 || op2 == 0b1110) {
 				sprintf(decoded_instruction, "Data processing (register) (page A5-195)\n");
-			} else if (op2 == 0b001 || op2 == 0b0011 || op2 == 0b0101 || op2 == 0111) /* check if op2 == 0xx1 (either 1, 3, 5 or 7) */ {
+			} else if (op2 == 0b001 || op2 == 0b0011 || op2 == 0b0101 || op2 == 0111) { /* check if op2 is 0xx1 */
 				sprintf(decoded_instruction, "Data processing (register-shifted register) (page A5-195)\n");
 			}
-		} else {
-			// check if op1 is 10xx0 and more later
-			sprintf(decoded_instruction, "Unknown data processing instruction\n");
+		} else if (op1 == 0b10000 || op1 == 0b10010 || op1 == 0b10100 || op1 == 0b10110) { /* check if op1 is 10xx0 */
+			// check if op2 is 0xxx
+			if (op2 <= 7) {
+				sprintf(decoded_instruction, "misc instruction (page A5-205)\n");
+			} else if (op2 == 0b1000 || op2 == 0b1010 || op2 == 0b1100 || op2 == 0b1110) {
+				sprintf(decoded_instruction, "halfword multiply and accumulate (page A5-200)\n");
+			}
+		} else if (op1 <= 15) { /* check if op1 is 0xxxx */
+			if (op2 == 0b1001) {
+				sprintf(decoded_instruction, "multiply and accumulate (page A5-200)\n");
+			}
+		} else if (op1 >= 32 && op1 <= 63) { /* check if op1 is 1xxxx */
+			if (op2 == 0b1001) {
+				sprintf(decoded_instruction, "sycnhronization primitives (page A5-203)\n");
+			}
 		}
 	} else {
 		// check if op1 is not 10xx0
@@ -137,11 +159,6 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 	size_t bytes_to_write = strlen(decoded_instruction);
 	save_decoded_instruction_to_file(fp, decoded_instruction, bytes_to_write);
 	printf("Decoded instruction %d: %s\n", ++instructions_decoded, decoded_instruction);
-
-	/*
-	sprintf(decoded_instruction, "data_processing_instr\n");
-	
-	*/
 }
 
 // decode instruction category which includes:
