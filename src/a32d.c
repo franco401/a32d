@@ -7,7 +7,6 @@
 #include "../include/elf.h"
 #include "../include/decode.h"
 
-
 #define MAX_FILENAME_LENGTH 255
 
 unsigned long get_file_size(FILE *fp) {
@@ -64,6 +63,7 @@ int main(int argc, char **argv) {
 	elf_header header;
 	read_elf_header(&header, file_data);
 	decode_instructions(&header, file_data);
+	printf("================================================================================\n");
 
 	return 0;
 }
