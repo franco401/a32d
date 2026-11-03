@@ -73,7 +73,7 @@ void decode_branch_instruction(unsigned int instruction, unsigned int cond) {
 	}
 
 	save_decoded_instruction_to_file(fp, decoded_instruction, bytes_to_write);
-	printf("Decoded instruction #%d: %s\n", ++instructions_decoded, decoded_instruction);
+	printf("Decoded instruction %d: %s\n", ++instructions_decoded, decoded_instruction);
 }
 
 // determine which type of branch instruction to do
@@ -91,7 +91,7 @@ void decode_data_processing_type(unsigned int instruction, unsigned int cond) {
 	sprintf(decoded_instruction, "data_processing_instr\n");
 	size_t bytes_to_write = strlen(decoded_instruction);
 	save_decoded_instruction_to_file(fp, decoded_instruction, bytes_to_write);
-	printf("Decoded instruction #%d: %s\n", ++instructions_decoded, decoded_instruction);
+	printf("Decoded instruction %d: %s\n", ++instructions_decoded, decoded_instruction);
 }
 
 // decode instruction category which includes:
@@ -113,11 +113,11 @@ void decode_instruction_category(const unsigned int instruction) {
 	}
 }
 
-void decode_instructions(const elf_header *header, const unsigned char *file_data) {
+void decode_instructions(const unsigned int entry_address, const unsigned char *file_data) {
 	unsigned char current_instruction[4];
 	unsigned int current_instruction_as_value = 0;
 	
-	unsigned count = 0;
+	unsigned count = -1;
 
 	// write instructions to an assembly file
 	const char *filename = "curl.s";
@@ -128,7 +128,7 @@ void decode_instructions(const elf_header *header, const unsigned char *file_dat
 	}
 
 	// read first 3 instructions (first 3 groups of 4 bytes) from entry point for now
-	for (unsigned i = header->e_entry; i < header->e_entry + 12; i += 4) {
+	for (unsigned i = entry_address; i < entry_address + 12; i += 4) {
 		
 		// load the current 4 bytes into the current_instruction buffer
 		for (unsigned j = 0; j < 4; j++) {
@@ -138,10 +138,10 @@ void decode_instructions(const elf_header *header, const unsigned char *file_dat
 
 		// load current 4 bytes as a single integer to decode it as an instruction
 		current_instruction_as_value = load_value_le(current_instruction, 4);
-		printf("Instruction #%u as a value: %u\n\n", ++count, current_instruction_as_value);
+		printf("Instruction %u as a value: %u\n\n", ++count, current_instruction_as_value);
 		decode_instruction_category(current_instruction_as_value);
 	}
 
-	printf("Decoded instructions written to: %s\n", filename);
+	printf("Decoded instructions written to the file: %s\n", filename);
 	fclose(fp);
 }

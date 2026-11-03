@@ -28,6 +28,31 @@ typedef struct elf_header {
 	unsigned int e_shstrndx;				// index of section header table entry containing section names
 } elf_header;
 
+typedef struct program_header {
+	unsigned int p_type;					// program header type
+	unsigned int p_flags;					// 64-bit program header flags (executable, writable or readable)
+	unsigned int p_offset;					// program header offset
+	unsigned int p_vaddr;					// program header virtual address
+	unsigned int p_paddr;					// program header physical address
+	unsigned int p_filesz;					// program header file size (may be 0)
+	unsigned int p_memsz;					// program header memory size (may be 0)
+	unsigned int p_flags32;					// 32-bit program header flags (executable, writable or readable)
+	unsigned int p_align;					// program header alignment (0/1 = no alignment or power of 2 where p_vaddr = p_offset - p_align)
+} program_header;
+
+typedef struct section_header {
+	unsigned int sh_name;					// offset to a section header string in the .shstrtab
+	unsigned int sh_type;					// section header type (i.e. null, program data, symbol table, etc.)
+	unsigned int sh_flags;					// section header flags (i.e. write, allocate, execute, strings, etc.)
+	unsigned int sh_addr;					// section header virtual address
+	unsigned int sh_offset;					// section header offset (may be 0)
+	unsigned int sh_size;					// section header size (may be 0)
+	unsigned int sh_link;					// section header index of an associated index 
+	unsigned int sh_info;					// section header info
+	unsigned int sh_addralign;				// section header address align (must be a power of 2)
+	unsigned int sh_entsize;				// section header entry size (end of section header)
+} section_header;
+
 #include "./decode.h"
 
 char *abi_table[18];
@@ -85,8 +110,8 @@ char *get_header_type(int header_type) {
 }
 
 char *isa_table[79];
-char *isa_type = "No specific instruction set";
-char *get_isa_type(int machine) {
+char *isa_type;
+char *get_isa_type(const unsigned int machine) {
 	isa_table[0x00]	= "No specific instruction set";
 	isa_table[0x01]	= "AT&T WE 32100";
 	isa_table[0x02] = "SPARC";
@@ -195,7 +220,7 @@ char *get_isa_type(int machine) {
 }
 
 char *program_segment_type;
-char *get_program_segment_type(int segment_type) {
+char *get_program_segment_type(const unsigned int segment_type) {
 	switch (segment_type) {
 		case 0x00000000:
 			program_segment_type = "PT_NULL (Program header table entry unused)";
@@ -238,7 +263,7 @@ char *get_program_segment_type(int segment_type) {
 }
 
 char *segement_dependent_flags;
-char *get_segment_dependent_flags(long p_flags) {
+char *get_segment_dependent_flags(const unsigned int p_flags) {
 	switch (p_flags) {
 		case 0x1:
 			segement_dependent_flags = "PF_X (Executable segment)";
@@ -256,7 +281,199 @@ char *get_segment_dependent_flags(long p_flags) {
 	return segement_dependent_flags;
 }
 
-void read_elf_header(elf_header *header, const unsigned char *file_data) {
+char *section_header_type;
+char *get_section_header_type(const unsigned int sh_type) {
+	switch (sh_type) {
+		case 0x0:
+			section_header_type = "SHT_NULL";
+			break;
+		case 0x1:
+			section_header_type = "SHT_PROGBITS";
+			break;
+		case 0x2:
+			section_header_type = "SHT_SYMTAB";
+			break;
+		case 0x3:
+			section_header_type = "SHT_STRTAB";
+			break;
+		case 0x4:
+			section_header_type = "SHT_RELA";
+			break;
+		case 0x5:
+			section_header_type = "SHT_HASH";
+			break;
+		case 0x6:
+			section_header_type = "SHT_DYNAMIC";
+			break;
+		case 0x7:
+			section_header_type = "SHT_NOTE";
+			break;
+		case 0x8:
+			section_header_type = "SHT_NOBITS";
+			break;
+		case 0x9:
+			section_header_type = "SHT_REL";
+			break;
+		case 0xA:
+			section_header_type = "SHT_SHLIB";
+			break;
+		case 0xB:
+			section_header_type = "SHT_DYNSYM";
+			break;
+		case 0xE:
+			section_header_type = "SHT_INIT_ARRAY";
+			break;
+		case 0xF:
+			section_header_type = "SHT_FINI_ARRAY";
+			break;
+		case 0x10:
+			section_header_type = "SHT_PREINIT_ARRAY";
+			break;
+		case 0x11:
+			section_header_type = "SHT_GROUP";
+			break;
+		case 0x12:
+			section_header_type = "SHT_SYMTAB_SHNDX";
+			break;
+		case 0x13:
+			section_header_type = "SHT_NUM";
+			break;
+		case 0x60000000:
+			section_header_type = "Start OS-specific";
+			break;
+		default:
+			section_header_type = "Unknown value";
+			break;
+	}
+	return section_header_type;
+}
+
+char *section_header_flags;
+char *get_section_header_flags(const unsigned int sh_flags) {
+	switch (sh_flags) {
+		case 0x0:
+			section_header_flags = "Unknown value";
+			break;
+		case 0x1:
+			section_header_flags = "SHF_WRITE";
+			break;
+		case 0x2:
+			section_header_flags = "SHF_ALLOC";
+			break;
+		case 0x4:
+			section_header_flags = "SHF_EXECINSTR";
+			break;
+		case 0x10:
+			section_header_flags = "SHF_MERGE";
+			break;
+		case 0x20:
+			section_header_flags = "SHF_STRINGS";
+			break;
+		case 0x40:
+			section_header_flags = "SHF_INFO_LINK";
+			break;
+		case 0x80:
+			section_header_flags = "SHF_LINK_ORDER";
+			break;
+		case 0x100:
+			section_header_flags = "SHF_OS_NONCONFORMING";
+			break;
+		case 0x200:
+			section_header_flags = "SHF_GROUP";
+			break;
+		case 0x400:
+			section_header_flags = "SHF_TLS";
+			break;
+		case 0x0FF00000:
+			section_header_flags = "SHF_MASKOS";
+			break;
+		case 0xF0000000:
+			section_header_flags = "SHF_MASKPROC";
+			break;
+		case 0x4000000:
+			section_header_flags = "SHF_ORDERED";
+			break;
+		case 0x8000000:
+			section_header_flags = "SHF_EXECLUDE";
+			break;
+		default:
+			section_header_flags = "Unknown value";
+			break;
+	}
+	return section_header_flags;
+}
+
+void read_section_header(section_header *header, const unsigned char *file_data, unsigned int section_header_offset) {
+	header->sh_name = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_type = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_flags = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_addr = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_offset = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_size = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_link = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_info = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_addralign = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	header->sh_entsize = file_data[section_header_offset];
+	section_header_offset += 4;
+
+	printf("Section Header Data\n\nSection header name offset:\t\t0x%x (%d)\nSection header type:\t\t\t%s\nSection header flags:\t\t\t%s\nSection header offset:\t\t\t0x%x (%u)\nSection header size:\t\t\t0x%x (%u)\nSection header link:\t\t\t0x%x (%u)\nSection header info:\t\t\t0x%x (%u)\nSection header address align:\t\t0x%x (%u)\nSection header entry size:\t\t0x%x (%u)\n", header->sh_name, header->sh_name, get_section_header_type(header->sh_type), get_section_header_flags(header->sh_flags), header->sh_offset, header->sh_offset, header->sh_size, header->sh_size, header->sh_link, header->sh_link, header->sh_info, header->sh_info, header->sh_addralign, header->sh_addralign, header->sh_entsize, header->sh_entsize);
+	printf("================================================================================\n");	
+}
+
+unsigned int read_program_header(program_header *header, const unsigned char *file_data, unsigned int program_header_offset) {
+	header->p_type = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_flags = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_offset = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_vaddr = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_paddr = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_filesz = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_memsz = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_flags = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	header->p_align = file_data[program_header_offset];
+	program_header_offset += 4;
+
+	printf("Program Header Data\n\nProgram header type:\t\t\t%s\nSegment dependent flags:\t\t%d | %s\nProgram header offset:\t\t\t0x%x (%u)\nProgram header virtual address:\t\t0x%x (%u)\nProgram header physical address:\t0x%x (%u)\nProgram file size:\t\t\t0x%x (%u)\nProgram memory size:\t\t\t0x%x (%u)\nProgram header alignment:\t\t0x%x (%u)\n", get_program_segment_type(header->p_type), header->p_flags, get_segment_dependent_flags(header->p_flags), header->p_offset, header->p_offset, header->p_vaddr, header->p_vaddr, header->p_paddr, header->p_paddr, header->p_filesz, header->p_filesz, header->p_memsz, header->p_memsz, header->p_align, header->p_align);
+	printf("================================================================================\n");	
+
+	// return updated offset value to jump to section header
+	return program_header_offset;
+}
+
+unsigned int read_elf_header(elf_header *header, const unsigned char *file_data) {
 	for (unsigned int i = 0; i < 4; i++) {
 		header->e_magic_number[i] = file_data[i];
 	}
@@ -313,4 +530,7 @@ void read_elf_header(elf_header *header, const unsigned char *file_data) {
 	printf("Header Type:\t\t\t\t%s\nMachine ISA:\t\t\t\t%s\nELF Version:\t\t\t\t%d\nEntry point address:\t\t\t0x%x (%u)\nProcess header offset:\t\t\t0x%x (%u)\nSection header offset:\t\t\t0x%x (%u)\nFlags:\t\t\t\t\t0x%x (%d)\n", get_header_type(header->e_type), get_isa_type(header->e_machine), header->e_version, header->e_entry, header->e_entry, header->e_phoff, header->e_phoff, header->e_shoff, header->e_shoff, header->e_flags, header->e_flags);
 	printf("ELF header size:\t\t\t0x%x (%d)\nProgram header size:\t\t\t0x%x (%d)\nNumber of entires in program header:\t0x%x (%u)\nSection header size:\t\t\t0x%x (%d)\nNumber of entires in section header:\t0x%x (%d)\nSection header string index:\t\t0x%x (%d)\n", header->e_ehsize, header->e_ehsize, header->e_phentsize, header->e_phentsize, header->e_phum, header->e_phum, header->e_shentsize, header->e_shentsize, header->e_shnum,header->e_shnum, header->e_shstrndx, header->e_shstrndx);
 	printf("================================================================================\n");
+
+	// return program header offset to jump to it for reading that header
+	return header->e_phoff;
 }

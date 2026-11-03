@@ -60,9 +60,15 @@ int main(int argc, char **argv) {
 	// don't need the FILE pointer anymore
 	fclose(fp);
 
-	elf_header header;
-	read_elf_header(&header, file_data);
-	decode_instructions(&header, file_data);
+	elf_header e_header;
+	program_header p_header;
+	section_header s_header;
+
+	unsigned int program_header_offset = read_elf_header(&e_header, file_data);
+	unsigned int section_header_offset = read_program_header(&p_header, file_data, program_header_offset);
+	read_section_header(&s_header, file_data, section_header_offset);
+
+	decode_instructions(e_header.e_entry, file_data);
 	printf("================================================================================\n");
 
 	return 0;

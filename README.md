@@ -8,7 +8,7 @@ A small, work in progress, prototype Linux diassembler for ARM32 / ARMv7 ELF bin
 make a32d
 ```
 
-2. Launch it (using 32-bit ARM version of curl as example)
+2. Launch it (using 32-bit ARM version of curl as an example)
 ```
 ./a32d ./binaries/curl
 ```
@@ -16,6 +16,7 @@ make a32d
 # Features (implemented so far using 32-bit ARM version of curl)
 
 - Parses 52-byte long 32-bit ELF binary header data
+- Parses ELF program and section headers
 
 - Reads, prints, and decodes the first 3 instructions, then writes them into a .s file
 
@@ -25,7 +26,6 @@ make a32d
 
 
 # Some goals to do later
-- Parse ELF section and program data
 - Decode the other instruction category types
 - Decode more specific instructions
 - Write out more than a handful of instructions to a .s file
